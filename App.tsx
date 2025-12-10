@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { ViewState, NodeData } from './types';
-import { MOCK_GRAPH_DATA } from './constants';
+import { MOCK_GRAPH_DATA, MOCK_ALERTS } from './constants';
 import Dashboard from './components/Dashboard';
 import NetworkGraph from './components/NetworkGraph';
 import IntelligencePanel from './components/IntelligencePanel';
+import ReportsView from './components/ReportsView';
+import IngestionView from './components/IngestionView';
+import SettingsView from './components/SettingsView';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
   const [selectedNode, setSelectedNode] = useState<NodeData | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const handleNodeSelect = (node: NodeData) => {
     setSelectedNode(node);
@@ -41,13 +45,19 @@ const App: React.FC = () => {
             active={currentView === ViewState.REPORTS} 
             icon="fa-file-shield" 
             label="Briefs" 
-            onClick={() => {}} 
+            onClick={() => setCurrentView(ViewState.REPORTS)} 
           />
            <NavButton 
             active={currentView === ViewState.INGESTION} 
             icon="fa-database" 
             label="Data" 
-            onClick={() => {}} 
+            onClick={() => setCurrentView(ViewState.INGESTION)} 
+          />
+           <NavButton 
+            active={currentView === ViewState.SETTINGS} 
+            icon="fa-cog" 
+            label="Settings" 
+            onClick={() => setCurrentView(ViewState.SETTINGS)} 
           />
         </div>
 
@@ -75,9 +85,51 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button className="text-slate-400 hover:text-white transition-colors">
-              <i className="fa-regular fa-bell"></i>
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`text-slate-400 hover:text-white transition-colors relative ${showNotifications ? 'text-white' : ''}`}
+              >
+                <i className="fa-regular fa-bell text-lg"></i>
+                {MOCK_ALERTS.length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                  </span>
+                )}
+              </button>
+              
+              {/* Notification Dropdown */}
+              {showNotifications && (
+                <div className="absolute right-0 top-10 w-80 bg-cyber-900 border border-cyber-800 rounded-lg shadow-2xl z-50 overflow-hidden animate-fade-in">
+                  <div className="p-3 border-b border-cyber-800 bg-cyber-950/50 flex justify-between items-center">
+                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">Notifications</h3>
+                    <span className="text-[10px] bg-cyber-800 px-1.5 py-0.5 rounded text-slate-300">{MOCK_ALERTS.length} New</span>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                    {MOCK_ALERTS.map(alert => (
+                      <div key={alert.id} className="p-3 border-b border-cyber-800 last:border-0 hover:bg-cyber-800/30 transition-colors cursor-pointer group">
+                        <div className="flex gap-3">
+                           <div className={`mt-1 flex-shrink-0 w-2 h-2 rounded-full ${
+                             alert.severity === 'critical' ? 'bg-rose-500 shadow-[0_0_5px_rgba(244,63,94,0.6)]' : 
+                             alert.severity === 'high' ? 'bg-orange-500' : 'bg-cyber-400'
+                           }`} />
+                           <div>
+                             <h4 className="text-xs font-bold text-slate-200 group-hover:text-cyber-400 transition-colors">{alert.title}</h4>
+                             <p className="text-[10px] text-slate-400 mt-1 leading-tight">{alert.description}</p>
+                             <span className="text-[9px] text-slate-500 font-mono mt-1 block">{alert.timestamp}</span>
+                           </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-2 bg-cyber-950/50 border-t border-cyber-800 text-center">
+                    <button className="text-[10px] text-cyber-400 hover:text-cyber-300 font-bold uppercase w-full py-1">Mark all read</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="px-3 py-1 bg-rose-500/10 border border-rose-500/20 rounded text-xs text-rose-400 font-bold">
               SECURITY LEVEL: HIGH
             </div>
@@ -119,6 +171,27 @@ const App: React.FC = () => {
                  <IntelligencePanel selectedNode={selectedNode} graphData={MOCK_GRAPH_DATA} />
               </div>
             </>
+          )}
+
+          {/* Reports View */}
+          {currentView === ViewState.REPORTS && (
+             <div className="w-full h-full animate-fade-in">
+               <ReportsView />
+             </div>
+          )}
+
+          {/* Ingestion View */}
+          {currentView === ViewState.INGESTION && (
+             <div className="w-full h-full animate-fade-in">
+               <IngestionView />
+             </div>
+          )}
+
+          {/* Settings View */}
+          {currentView === ViewState.SETTINGS && (
+             <div className="w-full h-full animate-fade-in">
+               <SettingsView />
+             </div>
           )}
 
         </div>
