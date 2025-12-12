@@ -1,7 +1,7 @@
 import React from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { MOCK_ALERTS, MOCK_GRAPH_DATA, NODE_COLORS } from '../constants';
-import { NodeType } from '../types';
+import { MOCK_GRAPH_DATA, NODE_COLORS } from '../constants';
+import { NodeType, ViewState, Alert } from '../types';
 
 // Process Data for charts
 const nodeTypeData = Object.values(NodeType).map(type => ({
@@ -21,20 +21,31 @@ interface StatCardProps {
   sub: string;
   icon: string;
   colorClass: string;
+  onClick?: () => void;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, sub, icon, colorClass }) => (
-  <div className="bg-cyber-900 border border-cyber-800 p-4 rounded-lg relative overflow-hidden group hover:border-cyber-700 transition-colors">
+const StatCard: React.FC<StatCardProps> = ({ title, value, sub, icon, colorClass, onClick }) => (
+  <div 
+    onClick={onClick}
+    className={`bg-cyber-900 border border-cyber-800 p-4 rounded-lg relative overflow-hidden group transition-all duration-300 ${onClick ? 'cursor-pointer hover:border-cyber-600 hover:bg-cyber-800 hover:-translate-y-1 hover:shadow-lg' : ''}`}
+  >
     <div className={`absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity ${colorClass}`}>
       <i className={`fa-solid ${icon} text-5xl`}></i>
     </div>
-    <h3 className="text-slate-400 text-sm font-medium uppercase tracking-wide">{title}</h3>
+    <h3 className="text-slate-400 text-sm font-medium uppercase tracking-wide group-hover:text-white transition-colors">{title}</h3>
     <div className="text-3xl font-bold text-white mt-2">{value}</div>
     <div className={`text-xs mt-1 ${colorClass.replace('text-', 'text-opacity-80 ')}`}>{sub}</div>
   </div>
 );
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onNavigate: (view: ViewState) => void;
+  alerts: Alert[];
+  onFilter: (filter: 'all' | 'risk' | NodeType) => void;
+  onNodeClick: (nodeId: string) => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ onNavigate, alerts, onFilter, onNodeClick }) => {
   // Get Top Risk Suspects
   const topSuspects = MOCK_GRAPH_DATA.nodes
     .filter(n => n.type === NodeType.SUSPECT)
@@ -50,10 +61,13 @@ const Dashboard: React.FC = () => {
           <p className="text-slate-400 text-sm">Real-time surveillance overview • Jharkhand District</p>
         </div>
         <div className="text-right">
-          <span className="px-3 py-1 bg-cyber-500/10 border border-cyber-500/50 text-cyber-400 text-xs rounded-full animate-pulse flex items-center gap-2">
+          <button 
+            onClick={() => onFilter('all')}
+            className="px-3 py-1 bg-cyber-500/10 border border-cyber-500/50 text-cyber-400 text-xs rounded-full animate-pulse flex items-center gap-2 hover:bg-cyber-500/20 cursor-pointer"
+          >
             <span className="w-2 h-2 rounded-full bg-cyber-400"></span>
             Live Monitoring
-          </span>
+          </button>
         </div>
       </div>
 
@@ -65,6 +79,7 @@ const Dashboard: React.FC = () => {
           sub="+2 identified today"
           icon="fa-user-secret"
           colorClass="text-cyber-accent"
+          onClick={() => onFilter(NodeType.SUSPECT)}
         />
         <StatCard 
           title="Mule Accounts" 
@@ -72,6 +87,7 @@ const Dashboard: React.FC = () => {
           sub="₹5.7 Lakhs frozen"
           icon="fa-building-columns"
           colorClass="text-emerald-400"
+          onClick={() => onFilter(NodeType.BANK_ACCOUNT)}
         />
         <StatCard 
           title="Flagged SIMs" 
@@ -79,13 +95,15 @@ const Dashboard: React.FC = () => {
           sub="High rotation detected"
           icon="fa-sim-card"
           colorClass="text-cyber-400"
+          onClick={() => onFilter(NodeType.SIM)}
         />
         <StatCard 
           title="Alerts" 
-          value={MOCK_ALERTS.length}
+          value={alerts.length}
           sub="1 Critical pending"
           icon="fa-bell"
           colorClass="text-yellow-400"
+          onClick={() => onFilter('risk')}
         />
       </div>
 
@@ -96,7 +114,9 @@ const Dashboard: React.FC = () => {
           <div className="bg-cyber-900 border border-cyber-800 p-4 rounded-lg flex flex-col h-80">
             <h3 className="text-white text-sm font-bold mb-4 flex items-center justify-between">
               <span>Call Volume Activity (24H)</span>
-              <span className="text-[10px] text-slate-500 font-normal">Updated: 5m ago</span>
+              <button className="text-[10px] text-slate-500 font-normal hover:text-white flex items-center gap-1">
+                <i className="fa-solid fa-rotate-right"></i> Updated: 5m ago
+              </button>
             </h3>
             <div className="flex-1 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -119,15 +139,24 @@ const Dashboard: React.FC = () => {
            <div className="bg-cyber-900 border border-cyber-800 p-4 rounded-lg">
              <div className="flex justify-between items-center mb-4">
                 <h3 className="text-white text-sm font-bold"><i className="fa-solid fa-crosshairs text-cyber-accent mr-2"></i>High Value Targets</h3>
-                <button className="text-xs text-cyber-400 hover:text-white">View All</button>
+                <button 
+                  onClick={() => onNavigate(ViewState.GRAPH_EXPLORER)}
+                  className="text-xs text-cyber-400 hover:text-white"
+                >
+                  View All
+                </button>
              </div>
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                {topSuspects.map(suspect => (
-                 <div key={suspect.id} className="bg-cyber-950/50 p-3 rounded border border-cyber-800 flex flex-col gap-2 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-transparent to-cyber-accent/10 rounded-bl-full"></div>
+                 <div 
+                    key={suspect.id} 
+                    onClick={() => onNodeClick(suspect.id)}
+                    className="bg-cyber-950/50 p-3 rounded border border-cyber-800 flex flex-col gap-2 relative overflow-hidden cursor-pointer hover:border-cyber-400 hover:bg-cyber-900 transition-all group"
+                 >
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-transparent to-cyber-accent/10 rounded-bl-full group-hover:to-cyber-accent/20 transition-colors"></div>
                     <div className="flex justify-between items-start z-10">
                        <div>
-                         <div className="text-xs text-slate-400 font-mono">{suspect.id}</div>
+                         <div className="text-xs text-slate-400 font-mono group-hover:text-cyber-400">{suspect.id}</div>
                          <div className="text-sm font-bold text-white">{suspect.label}</div>
                        </div>
                        <div className="text-xs font-bold text-cyber-accent">{suspect.riskScore}% Risk</div>
@@ -162,9 +191,14 @@ const Dashboard: React.FC = () => {
                     paddingAngle={5}
                     dataKey="value"
                     stroke="none"
+                    onClick={(data) => {
+                         // Filter graph by clicked slice type
+                         if(data && data.name) onFilter(data.name as NodeType);
+                    }}
+                    className="cursor-pointer outline-none"
                   >
                     {nodeTypeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={NODE_COLORS[entry.name as NodeType] || '#fff'} />
+                      <Cell key={`cell-${index}`} fill={NODE_COLORS[entry.name as NodeType] || '#fff'} className="hover:opacity-80 transition-opacity" />
                     ))}
                   </Pie>
                   <Tooltip 
@@ -182,7 +216,11 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="grid grid-cols-2 gap-2 mt-2">
               {nodeTypeData.map(entry => (
-                <div key={entry.name} className="flex items-center text-[10px] text-slate-400">
+                <div 
+                    key={entry.name} 
+                    className="flex items-center text-[10px] text-slate-400 cursor-pointer hover:text-white"
+                    onClick={() => onFilter(entry.name as NodeType)}
+                >
                   <span className="w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: NODE_COLORS[entry.name as NodeType] }}></span>
                   <span className="capitalize">{entry.name.replace('_', ' ').toLowerCase()}</span>
                 </div>
@@ -194,11 +232,15 @@ const Dashboard: React.FC = () => {
           <div className="bg-cyber-900 border border-cyber-800 rounded-lg overflow-hidden flex flex-col">
             <div className="p-3 border-b border-cyber-800 bg-cyber-950/30 flex justify-between items-center">
               <h3 className="text-white text-sm font-bold">Recent Intelligence Alerts</h3>
-              <span className="text-[10px] bg-cyber-800 text-slate-300 px-1.5 py-0.5 rounded">{MOCK_ALERTS.length}</span>
+              <span className="text-[10px] bg-cyber-800 text-slate-300 px-1.5 py-0.5 rounded">{alerts.length}</span>
             </div>
             <div className="flex-1 overflow-y-auto max-h-64 custom-scrollbar">
-              {MOCK_ALERTS.map(alert => (
-                <div key={alert.id} className="p-3 border-b border-cyber-800 last:border-0 hover:bg-cyber-800/30 transition-colors">
+              {alerts.map(alert => (
+                <div 
+                    key={alert.id} 
+                    onClick={() => onFilter('risk')}
+                    className="p-3 border-b border-cyber-800 last:border-0 hover:bg-cyber-800/30 transition-colors cursor-pointer"
+                >
                   <div className="flex justify-between items-start">
                     <div className="flex gap-3">
                       <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${

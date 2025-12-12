@@ -8,7 +8,11 @@ interface FileItem {
   progress: number;
 }
 
-const IngestionView: React.FC = () => {
+interface IngestionViewProps {
+  onNotify: (message: string, type: 'success' | 'error' | 'info') => void;
+}
+
+const IngestionView: React.FC<IngestionViewProps> = ({ onNotify }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<FileItem[]>([
     { id: '1', name: 'Deoghar_CDR_Dump_Oct.csv', size: '45 MB', status: 'Completed', progress: 100 },
@@ -28,6 +32,10 @@ const IngestionView: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
+  const handleRefresh = () => {
+    onNotify('Status refreshed from ingestion server', 'info');
+  };
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = event.target.files;
     if (newFiles && newFiles.length > 0) {
@@ -41,15 +49,16 @@ const IngestionView: React.FC = () => {
       };
 
       setFiles(prev => [newFileItem, ...prev]);
+      onNotify(`Queued ${file.name} for ingestion`, 'info');
 
       // Simulate upload
-      setTimeout(() => simulateUpload(newFileItem.id), 500);
+      setTimeout(() => simulateUpload(newFileItem.id, file.name), 500);
     }
     // Reset input
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const simulateUpload = (id: string) => {
+  const simulateUpload = (id: string, name: string) => {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, status: 'Processing' } : f));
 
     const interval = setInterval(() => {
@@ -64,6 +73,7 @@ const IngestionView: React.FC = () => {
         
         if (newProgress >= 100) {
           clearInterval(interval);
+          onNotify(`Completed ingestion for ${name}`, 'success');
           return prev.map(f => f.id === id ? { ...f, status: 'Completed', progress: 100 } : f);
         }
         
@@ -125,7 +135,7 @@ const IngestionView: React.FC = () => {
         <div className="bg-cyber-900 border border-cyber-800 rounded-lg p-5 flex flex-col h-[500px]">
           <div className="flex justify-between items-center mb-4 flex-shrink-0">
             <h3 className="text-white font-bold text-sm">Processing Queue</h3>
-            <button className="text-xs text-cyber-400 hover:text-white" onClick={() => {}}><i className="fa-solid fa-rotate mr-1"></i> Refresh</button>
+            <button className="text-xs text-cyber-400 hover:text-white" onClick={handleRefresh}><i className="fa-solid fa-rotate mr-1"></i> Refresh</button>
           </div>
           
           <div className="space-y-3 overflow-y-auto flex-1 pr-2 custom-scrollbar">

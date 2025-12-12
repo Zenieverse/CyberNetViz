@@ -12,7 +12,15 @@ interface NetworkGraphProps {
 const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, onNodeSelect, selectedNode }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  const gRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
+  
+  // Use a ref for the callback to avoid restarting the simulation when the callback reference changes
+  const onNodeSelectRef = useRef(onNodeSelect);
+  useEffect(() => {
+    onNodeSelectRef.current = onNodeSelect;
+  }, [onNodeSelect]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -30,6 +38,7 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, onNodeSelect, selecte
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Initialize and Render Graph
   useEffect(() => {
     if (!svgRef.current || !data.nodes.length) return;
 
@@ -50,13 +59,15 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, onNodeSelect, selecte
 
     // Define Zoom behavior
     const g = svg.append("g");
+    gRef.current = g;
     
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
       .on("zoom", (event) => {
         g.attr("transform", event.transform);
       });
-
+    
+    zoomRef.current = zoom;
     svg.call(zoom);
 
     // Links
@@ -84,12 +95,15 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, onNodeSelect, selecte
       .on("click", (event, d) => {
         // Find the original node object to pass back
         const originalNode = data.nodes.find(n => n.id === d.id);
-        if (originalNode) onNodeSelect(originalNode);
+        if (originalNode && onNodeSelectRef.current) {
+            onNodeSelectRef.current(originalNode);
+        }
         event.stopPropagation();
       });
 
     // Node Circles
     node.append("circle")
+      .attr("id", (d) => `node-${d.id}`) // Add ID for easier selection
       .attr("r", (d) => d.type === NodeType.SUSPECT ? 15 : 10)
       .attr("fill", (d) => NODE_COLORS[d.type] || '#ccc')
       .attr("stroke", (d) => (selectedNode?.id === d.id ? "#fff" : "#1e293b"))
@@ -140,7 +154,39 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, onNodeSelect, selecte
     return () => {
       simulation.stop();
     };
-  }, [data, dimensions, selectedNode, onNodeSelect]);
+  }, [data, dimensions]); // REMOVED onNodeSelect from dependencies to prevent restarts
+
+  // Separate effect to handle selection highlighting and zooming
+  useEffect(() => {
+    if(!svgRef.current || !selectedNode || !zoomRef.current) return;
+
+    const svg = d3.select(svgRef.current);
+
+    // Update highlights
+    svg.selectAll("circle")
+       .attr("stroke", (d: any) => (d.id === selectedNode.id ? "#fff" : "#1e293b"))
+       .attr("stroke-width", (d: any) => (d.id === selectedNode.id ? 3 : 1.5));
+    
+    // Attempt to fly to node if simulation has settled or we can access node position
+    // Since we don't have direct access to the simulated node objects easily without re-selecting
+    // We will search the data bound to the DOM elements
+    const selectedElement = svg.select(`#node-${selectedNode.id}`);
+    if (!selectedElement.empty()) {
+       const nodeData = selectedElement.datum() as NodeData;
+       if (nodeData.x !== undefined && nodeData.y !== undefined) {
+          const { width, height } = dimensions;
+          const scale = 1.5;
+          const x = -nodeData.x * scale + width / 2;
+          const y = -nodeData.y * scale + height / 2;
+          
+          svg.transition().duration(750).call(
+             zoomRef.current.transform as any, 
+             d3.zoomIdentity.translate(x, y).scale(scale)
+          );
+       }
+    }
+
+  }, [selectedNode, dimensions]);
 
   return (
     <div ref={wrapperRef} className="w-full h-full bg-cyber-950 rounded-lg overflow-hidden border border-cyber-800 relative">

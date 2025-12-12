@@ -37,6 +37,7 @@ export enum NodeType {
     description: string;
     severity: 'low' | 'medium' | 'high' | 'critical';
     timestamp: string;
+    read?: boolean;
   }
   
   export interface IntelligenceReport {
