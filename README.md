@@ -131,12 +131,5 @@ Wikipedia
 
 ---
 
-If you want, I can also generate:
 
-✅ **SVG/UML diagrams** for architecture  
-✅ **Example threat dataset JSON**  
-✅ **Mermaid flowcharts** for docs
-
-Just tell me what you need next!
-::contentReference[oaicite:2]{index=2}
 
