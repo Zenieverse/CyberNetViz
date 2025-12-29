@@ -6,7 +6,9 @@
 
 This contains everything you need to run your app locally.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1IuDyGTllxXxc90gDgNNXlrwl5HRkEz6o or https://poe.com/CyberNetViz
+View your app in AI Studio: https://ai.studio/apps/drive/1IuDyGTllxXxc90gDgNNXlrwl5HRkEz6o 
+
+or https://poe.com/CyberNetViz
 
 Demo Video: https://youtu.be/b-pdX8jsWJ8?si=ZufRBuHIXqgZJFwF   
 
